@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-wecom-turn-notify",
-  "version": "0.1.0",
-  "description": "DSH 插件：每轮对话结束时向企业微信群机器人 Webhook 推送通知。",
+  "version": "0.2.0",
+  "description": "DSH 插件：每轮对话结束时向企业微信群机器人 Webhook 推送通知，颗粒度四档可选（含子智能体限字简报）。",
   "type": "module",
   "main": "index.js",
   "exports": {
