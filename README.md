@@ -28,7 +28,7 @@
 ## 安装
 
 ```bash
-dsh plugin --profile <你的 profile 名> install https://github.com/<owner>/dsh-plugin-wecom-notify
+dsh plugin --profile <你的 profile 名> install https://github.com/luccion/dsh-plugin-wecom-notify
 ```
 
 装完在 DSH 的 **Plugins** 页能看到 `dsh-plugin-wecom-turn-notify`，可以开关、删除，也能直接在
@@ -137,7 +137,7 @@ A DSH (DeepSeek Harness) host plugin that posts a WeCom (WeChat Work) group-robo
 message whenever one conversation turn finishes.
 
 ```bash
-dsh plugin --profile <profile> install https://github.com/<owner>/dsh-plugin-wecom-notify
+dsh plugin --profile <profile> install https://github.com/luccion/dsh-plugin-wecom-notify
 ```
 
 - Outbound only — it POSTs to `qyapi.weixin.qq.com`; no public server, domain, or callback setup.

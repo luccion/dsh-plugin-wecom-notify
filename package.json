@@ -30,12 +30,12 @@
   "author": "lunch",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OWNER/dsh-plugin-wecom-notify.git"
+    "url": "git+https://github.com/luccion/dsh-plugin-wecom-notify.git"
   },
   "bugs": {
-    "url": "https://github.com/OWNER/dsh-plugin-wecom-notify/issues"
+    "url": "https://github.com/luccion/dsh-plugin-wecom-notify/issues"
   },
-  "homepage": "https://github.com/OWNER/dsh-plugin-wecom-notify#readme",
+  "homepage": "https://github.com/luccion/dsh-plugin-wecom-notify#readme",
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
