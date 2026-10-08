@@ -33,6 +33,15 @@ import {
 /** Cordis plugin name. */
 export const name = 'wecom-turn-notify'
 
+/**
+ * LOCAL PATCH (2026-10-08): declare the service this plugin uses.
+ * Cordis refuses `ctx.<service>` access for a service the plugin never injected, and
+ * DSH escalates that uncaught error to a fatal host exit (`fatal load failure`), which
+ * took down the whole desktop app on every notification. DSH's own subagent consumers
+ * declare exactly `inject: ['subagents']`.
+ */
+export const inject = ['subagents']
+
 /** Notification detail level, rendered as a dropdown in the Settings UI. */
 const ModeSchema = Schema.union(MODES.map((mode) => Schema.const(mode).description(MODE_LABELS[mode])))
   .default('normal')
@@ -159,7 +168,51 @@ export function apply(ctx, config) {
   const summaryChars = config.summaryChars === 'model' ? 'model' : Number(config.summaryChars)
   const trace = makeTrace(resolveTracePath(config))
 
-  trace(`apply() entered; webhook=${displayUrl || '(empty)'}; mode=${mode}; rootsOnly=${String(config.rootsOnly)}; summaryChars=${String(summaryChars)}`)
+  /**
+   * LOCAL PATCH (2026-10-08): non-throwing Cordis service lookup.
+   * Cordis throws `cannot get property "<name>" without inject` for a service the plugin
+   * never declared, and DSH escalates that uncaught error to a fatal host exit. With
+   * `inject` declared, `ctx.<name>` is the primary accessor; the reader-style fallbacks
+   * cover loaders where only those resolve. Every attempt is guarded, so a missing service
+   * degrades the digest instead of killing the host.
+   * @param {string} name - service key.
+   * @returns {any} the live service, or undefined.
+   */
+  function readService(name) {
+    const readers = [
+      () => ctx[name],
+      () => ctx.reflect?.get?.(name),
+      () => (typeof ctx.get === 'function' ? ctx.get(name) : undefined),
+    ]
+    for (const read of readers) {
+      try {
+        const value = read()
+        if (value !== undefined && value !== null) return value
+      } catch {
+        // unusable accessor; try the next one
+      }
+    }
+    return undefined
+  }
+
+  /** Report which accessor resolves a service, for the activation trace. */
+  function probeAccessors(name) {
+    const report = []
+    const check = (label, read) => {
+      try {
+        const value = read()
+        report.push(`${label}=${value === undefined || value === null ? 'undef' : (typeof value.start === 'function' ? 'ok' : 'obj')}`)
+      } catch {
+        report.push(`${label}=throw`)
+      }
+    }
+    check('prop', () => ctx[name])
+    check('reflect', () => ctx.reflect?.get?.(name))
+    check('get', () => (typeof ctx.get === 'function' ? ctx.get(name) : undefined))
+    return report.join(',')
+  }
+
+  trace(`apply() entered; build=local-patch-2026-10-08b; webhook=${displayUrl || '(empty)'}; mode=${mode}; rootsOnly=${String(config.rootsOnly)}; summaryChars=${String(summaryChars)}; subagents[${probeAccessors('subagents')}]`)
 
   if (!config.enabled) {
     ctx.logger.info('%c 已禁用', name)
@@ -229,7 +282,10 @@ export function apply(ctx, config) {
    * @returns {Promise<{ summary?: string, note?: string, error?: string }>} the digest, or why it is absent.
    */
   async function summarize({ sessionId, title, stats }) {
-    const subagents = ctx.subagents
+    // LOCAL PATCH (2026-10-08): was `const subagents = ctx.subagents`, which throws in a
+    // real Cordis loader because this plugin declared no `inject` — the throw escaped
+    // through an unhandled rejection and killed the DSH host on every sent notification.
+    const subagents = readService('subagents')
     if (subagents === undefined || subagents === null || typeof subagents.start !== 'function') {
       return { error: 'subagent service unavailable' }
     }
@@ -237,12 +293,20 @@ export function apply(ctx, config) {
     if (parent === undefined) {
       return { error: 'parent agent no longer live' }
     }
-    const providers = typeof subagents.list === 'function' ? subagents.list() : []
-    const providerName = providers.includes(config.summaryProvider) ? config.summaryProvider : providers[0]
-    if (providerName === undefined) {
-      return { error: 'no subagent provider registered' }
+    let providers = []
+    let provider
+    let providerName
+    try {
+      providers = typeof subagents.list === 'function' ? subagents.list() : []
+      if (!Array.isArray(providers)) providers = []
+      providerName = providers.includes(config.summaryProvider) ? config.summaryProvider : providers[0]
+      if (providerName === undefined) {
+        return { error: 'no subagent provider registered' }
+      }
+      provider = typeof subagents.getProvider === 'function' ? subagents.getProvider(providerName) : undefined
+    } catch {
+      return { error: 'subagent provider lookup failed' }
     }
-    const provider = typeof subagents.getProvider === 'function' ? subagents.getProvider(providerName) : undefined
     const supports = provider?.capabilities ?? { agentOptions: true, toolFilter: true, persona: true, depthLimit: true }
 
     const chars = summaryChars === 'model' ? undefined : summaryChars
@@ -307,6 +371,12 @@ export function apply(ctx, config) {
             trace(`summary failed session=${item.sessionId} turn=${String(item.detail?.turn)}: ${attempt.error ?? 'unknown'}`)
           }
         })
+        .catch((error) => {
+          // LOCAL PATCH (2026-10-08): belt and braces. DSH turns an unhandled rejection
+          // into a fatal host exit, so nothing may escape the summarizer path.
+          item.summaryNote = `智能总结不可用（${error instanceof Error ? error.message : String(error)}），已退回截断`
+          trace(`summary failed session=${item.sessionId} turn=${String(item.detail?.turn)}: ${item.summaryNote}`)
+        })
         .finally(() => {
           queue.push(item)
           void drain()
@@ -331,7 +401,13 @@ export function apply(ctx, config) {
         }
         const item = queue.shift()
         lastSentAt = Date.now()
-        await deliver(item)
+        try {
+          await deliver(item)
+        } catch (error) {
+          // LOCAL PATCH (2026-10-08): a delivery throw must not become an unhandled
+          // rejection, which DSH would escalate to a fatal host exit.
+          trace(`deliver threw turn=${String(item?.detail?.turn)}: ${error instanceof Error ? error.message : String(error)}`)
+        }
       }
     } finally {
       draining = false
