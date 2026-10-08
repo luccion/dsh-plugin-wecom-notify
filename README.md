@@ -28,8 +28,20 @@
 ## 安装
 
 ```bash
-dsh plugin --profile <你的 profile 名> install https://github.com/luccion/dsh-plugin-wecom-notify
+# 1. 先拿到源码（这步不能省：插件自身依赖要从这里装）
+git clone https://github.com/luccion/dsh-plugin-wecom-notify
+cd dsh-plugin-wecom-notify
+pnpm install
+
+# 2. 装进你的 DSH profile
+dsh plugin --profile <你的 profile 名> install "$(pwd)"
 ```
+
+> 第 1 步的 `pnpm install` 是必需的：DSH 用 `link:` 把插件挂进 profile，而插件的
+> `import '@deepseek-ai/schemastery'` 会从**克隆目录**解析。跳过它就会看到
+> “failed to import”。
+>
+> 想锁版本可以用 tag：`git clone --branch v0.1.0 https://github.com/luccion/dsh-plugin-wecom-notify`
 
 装完在 DSH 的 **Plugins** 页能看到 `dsh-plugin-wecom-turn-notify`，可以开关、删除，也能直接在
 它的配置表单里改 Webhook（配置 schema 会投影到设置页）。热重载生效，不需要重启。
@@ -137,8 +149,14 @@ A DSH (DeepSeek Harness) host plugin that posts a WeCom (WeChat Work) group-robo
 message whenever one conversation turn finishes.
 
 ```bash
-dsh plugin --profile <profile> install https://github.com/luccion/dsh-plugin-wecom-notify
+git clone https://github.com/luccion/dsh-plugin-wecom-notify
+cd dsh-plugin-wecom-notify && pnpm install
+dsh plugin --profile <profile> install "$(pwd)"
 ```
+
+The `pnpm install` step is required: DSH links the plugin into the profile, and the plugin's
+own `import '@deepseek-ai/schemastery'` resolves from the clone. Pin a release with
+`git clone --branch v0.1.0 …`.
 
 - Outbound only — it POSTs to `qyapi.weixin.qq.com`; no public server, domain, or callback setup.
 - Non-blocking: events only schedule work; a serialized queue performs the HTTP sends.
