@@ -1,0 +1,50 @@
+{
+  "name": "dsh-plugin-wecom-turn-notify",
+  "version": "0.1.0",
+  "description": "DSH 插件：每轮对话结束时向企业微信群机器人 Webhook 推送通知。",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./notify": "./lib/notify.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "cordis-plugin",
+    "wecom",
+    "wechat-work",
+    "webhook",
+    "notification"
+  ],
+  "license": "MIT",
+  "author": "lunch",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OWNER/dsh-plugin-wecom-notify.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OWNER/dsh-plugin-wecom-notify/issues"
+  },
+  "homepage": "https://github.com/OWNER/dsh-plugin-wecom-notify#readme",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "test": "node test/run.mjs && node test/apply.mjs"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "3.18.4"
+  }
+}

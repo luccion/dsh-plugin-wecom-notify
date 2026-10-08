@@ -1,0 +1,25 @@
+name: test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --no-frozen-lockfile
+      # Pure helpers plus the delivery path, with fetch stubbed.
+      - run: node test/run.mjs
+      # apply() wiring, event de-duplication and the Config schema.
+      - run: node test/apply.mjs
+      # The package must be importable by its bare name, the way the DSH loader does it.
+      - run: node -e "import('dsh-plugin-wecom-turn-notify').then(m => { if (!m.Config || !m.apply) throw new Error('bad exports'); console.log('exports ok'); })"

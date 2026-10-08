@@ -1,0 +1,5 @@
+# Keep the repository text files LF so a clone produces the same bytes on any OS.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.tgz binary

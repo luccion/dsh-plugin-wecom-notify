@@ -1,0 +1,17 @@
+# The bundle patch for dsh-plugin-wecom-turn-notify.
+#
+# A bundle layer is applied over the empty profile root before the user's own
+# cordis.patch.yml, so this is the plugin's only insert row. It deliberately
+# carries NO config: the profile's own cordis.patch.yml is where this profile
+# keeps its webhookUrl (and any other setting), and the plugin's Config schema
+# supplies every other default.
+#
+# Keeping the row config-free here also avoids two `insert` rows for the same
+# id, which would leave the Loader with a duplicate for its id-based index.
+#
+# `name` must stay a bare package specifier: a bundle patch has no patch
+# directory to anchor a relative path against, so `./index.js` would not
+# resolve here.
+- insert:
+    - id: wecom-turn-notify
+      name: 'dsh-plugin-wecom-turn-notify'
