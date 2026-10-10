@@ -2,8 +2,6 @@
 
 > DSH 每轮对话结束时，向企业微信群机器人 Webhook 推送通知 —— 提醒颗粒度可选四档。
 
-[English](#english) | 中文
-
 [DSH (DeepSeek Harness)](https://github.com/deepseek-ai/deepseek-harness) 宿主插件。挂在 durable 的
 `turn/end` 会话事件上，所以正常结束、出错、被中止、达到输出上限都会通知，并带上结束原因。
 
@@ -17,12 +15,12 @@
 
 ## 四档提醒颗粒度
 
-| `mode` | 消息内容 | 额外开销 |
-|---|---|---|
-| `status` | 只有标题行：会话 / 第几轮 / 结果 / 时间 | 无 |
-| `normal`（默认） | status + 本轮助手文本，截断到 1200 字节 | 无 |
-| `detailed` | 更长的摘要（3500 字节）+ `**过程**：N 步 · M 次工具调用（K 次失败）`；失败轮次附排查提示 | 无 |
-| `smart` | 调用子智能体把本轮压成 ≤140 字简报（可配），附过程统计；失败自动退回截断 | 一次子智能体会话，约数秒 |
+| `mode`           | 消息内容                                                                                 | 额外开销                 |
+| ---------------- | ---------------------------------------------------------------------------------------- | ------------------------ |
+| `status`         | 只有标题行：会话 / 第几轮 / 结果 / 时间                                                  | 无                       |
+| `normal`（默认） | status + 本轮助手文本，截断到 1200 字节                                                  | 无                       |
+| `detailed`       | 更长的摘要（3500 字节）+ `**过程**：N 步 · M 次工具调用（K 次失败）`；失败轮次附排查提示 | 无                       |
+| `smart`          | 调用子智能体把本轮压成 ≤140 字简报（可配），附过程统计；失败自动退回截断                 | 一次子智能体会话，约数秒 |
 
 `status` 是这样的：
 
@@ -42,9 +40,7 @@
 > **状态**：第 3 轮 · 已完成 · 2026-10-08 09:41:02
 > **过程**：4 步 · 7 次工具调用
 
-登录校验已改好，测试全绿，无遗留风险。
->
-> _子智能体总结 · ≤140 字_
+登录校验已改好，无遗留风险。
 ```
 
 ### 关于 `smart`
@@ -60,7 +56,7 @@
 ## 安装
 
 ```bash
-# 1. 先拿到源码（这步不能省：插件自身依赖要从这里装）
+# 1. 先拿到源码
 git clone https://github.com/luccion/dsh-plugin-wecom-notify
 cd dsh-plugin-wecom-notify
 pnpm install
@@ -76,6 +72,8 @@ dsh plugin --profile <你的 profile 名> install "$(pwd)"
 
 装完在 DSH 的 **Plugins** 页能看到 `dsh-plugin-wecom-turn-notify`，可以开关、删除，也能直接在
 它的配置表单里改（`mode` 会渲染成下拉框）。热重载生效，不需要重启。
+
+或者直接把本.git 地址粘贴到DeepSeek Harness Desktop 的插件安装输入框中，他会帮你完成。
 
 卸载：
 
@@ -99,36 +97,36 @@ https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx-xxxx-xxxx-xxxx-xxx
 
 ```yaml
 - id: wecom-turn-notify
-  name: 'dsh-plugin-wecom-turn-notify'
+  name: "dsh-plugin-wecom-turn-notify"
   config:
-    webhookUrl: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=你的KEY'
-    mode: 'smart'          # status | normal | detailed | smart
-    summaryChars: 140      # 数字，或 "model"
+    webhookUrl: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=你的KEY"
+    mode: "smart" # status | normal | detailed | smart
+    summaryChars: 140 # 数字，或 "model"
 ```
 
 改完热重载立即生效。
 
 ## 配置项
 
-| 字段 | 默认 | 说明 |
-|---|---|---|
-| `webhookUrl` | `''` | 企业微信群机器人 Webhook。留空时只写诊断日志、不发送。 |
-| `enabled` | `true` | 总开关。 |
-| `mode` | `normal` | 提醒颗粒度：`status` / `normal` / `detailed` / `smart`。 |
-| `heading` | `DSH 对话完成` | 消息一级标题（前面会自动加 ✅ / ❌ / ⚠️）。 |
-| `rootsOnly` | `true` | 只通知顶层会话；关掉后子代理的每一轮也会通知。 |
-| `mentionList` | `[]` | 要 @ 的手机号数组；填 `"@all"` 表示 @所有人。 |
-| `includeText` | `true` | 是否附带本轮助手文本（`status` 档本来就不发正文）。 |
-| `maxContentBytes` | `0` | 摘要字节上限；`0` 表示用当前档位默认值（normal 1200 / detailed 3500）。 |
-| `summaryChars` | `140` | `smart` 档简报的字数上限；填 `"model"` 表示交给模型自己的限制。 |
-| `summaryProvider` | `spawn` | `smart` 档用哪个子智能体 provider（`spawn` 干净新起 / `fork` 分叉上下文）。 |
-| `summaryModel` | `''` | `smart` 档使用的模型；留空用子智能体默认路由。 |
-| `summaryTimeoutMs` | `60000` | 总结超时；超时后本条退回本地截断。 |
-| `debounceMs` | `1500` | 每轮结束后的静默合并窗口。 |
-| `minIntervalMs` | `3000` | 两次发送的最小间隔（规避企业微信 20 条/分钟限流）。 |
-| `timeoutMs` | `8000` | 单次 HTTP 请求超时。 |
-| `attempts` | `3` | 总尝试次数；`93000/40001/40008`（密钥或报文问题）不重试。 |
-| `debugLog` | `false` | `true` 写到插件目录的 trace 日志，或给一个绝对路径；用来确认插件是否真的挂上。 |
+| 字段               | 默认           | 说明                                                                           |
+| ------------------ | -------------- | ------------------------------------------------------------------------------ |
+| `webhookUrl`       | `''`           | 企业微信群机器人 Webhook。留空时只写诊断日志、不发送。                         |
+| `enabled`          | `true`         | 总开关。                                                                       |
+| `mode`             | `normal`       | 提醒颗粒度：`status` / `normal` / `detailed` / `smart`。                       |
+| `heading`          | `DSH 对话完成` | 消息一级标题（前面会自动加 ✅ / ❌ / ⚠️）。                                    |
+| `rootsOnly`        | `true`         | 只通知顶层会话；关掉后子代理的每一轮也会通知。                                 |
+| `mentionList`      | `[]`           | 要 @ 的手机号数组；填 `"@all"` 表示 @所有人。                                  |
+| `includeText`      | `true`         | 是否附带本轮助手文本（`status` 档本来就不发正文）。                            |
+| `maxContentBytes`  | `0`            | 摘要字节上限；`0` 表示用当前档位默认值（normal 1200 / detailed 3500）。        |
+| `summaryChars`     | `140`          | `smart` 档简报的字数上限；填 `"model"` 表示交给模型自己的限制。                |
+| `summaryProvider`  | `spawn`        | `smart` 档用哪个子智能体 provider（`spawn` 干净新起 / `fork` 分叉上下文）。    |
+| `summaryModel`     | `''`           | `smart` 档使用的模型；留空用子智能体默认路由。                                 |
+| `summaryTimeoutMs` | `60000`        | 总结超时；超时后本条退回本地截断。                                             |
+| `debounceMs`       | `1500`         | 每轮结束后的静默合并窗口。                                                     |
+| `minIntervalMs`    | `3000`         | 两次发送的最小间隔（规避企业微信 20 条/分钟限流）。                            |
+| `timeoutMs`        | `8000`         | 单次 HTTP 请求超时。                                                           |
+| `attempts`         | `3`            | 总尝试次数；`93000/40001/40008`（密钥或报文问题）不重试。                      |
+| `debugLog`         | `false`        | `true` 写到插件目录的 trace 日志，或给一个绝对路径；用来确认插件是否真的挂上。 |
 
 ## 排障
 
@@ -182,38 +180,3 @@ patch 编辑）。桌面版目前不会因为模块文件变化自动替换已�
 [MIT](LICENSE)
 
 ---
-
-<a id="english"></a>
-## English
-
-A DSH (DeepSeek Harness) host plugin that posts a WeCom (WeChat Work) group-robot markdown
-message whenever one conversation turn finishes, at one of four detail levels.
-
-```bash
-git clone https://github.com/luccion/dsh-plugin-wecom-notify
-cd dsh-plugin-wecom-notify && pnpm install
-dsh plugin --profile <profile> install "$(pwd)"
-```
-
-The `pnpm install` step is required: DSH links the plugin into the profile, and the plugin's
-own `import '@deepseek-ai/schemastery'` resolves from the clone. Pin a release with
-`git clone --branch v0.1.0 …`.
-
-| `mode` | What the message carries |
-|---|---|
-| `status` | One status line: session, turn, outcome, time — no body. |
-| `normal` (default) | Status line plus the turn's assistant text, truncated to 1200 bytes. |
-| `detailed` | Longer excerpt (3500 bytes) plus a process line: steps, tool calls, failures. |
-| `smart` | A subagent-written digest capped at 140 characters, plus the process line. |
-
-`smart` runs one one-shot subagent per notified turn (provider `spawn` by default, **no tools**,
-`maxDepth: 1`, a summarizer persona). The character cap is enforced by the plugin even when the
-model overshoots, and any failure degrades to local truncation with the reason shown in the
-message — a notification is never lost. Expect one extra model call and one extra
-`wecom-summary` child session row per turn.
-
-- Outbound only — it POSTs to `qyapi.weixin.qq.com`; no public server, domain, or callback setup.
-- Non-blocking: events only schedule work; a serialized queue performs the HTTP sends.
-- Top-level sessions only by default, so subagent turns stay quiet.
-- Debounce (1.5s), rate-limit spacing (3s) and 3 retries by default; the webhook key is redacted in logs.
-- Configure `webhookUrl` and `mode` from the Plugins page or a `cordis.patch.yml` override.

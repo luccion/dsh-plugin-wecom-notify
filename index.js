@@ -130,7 +130,7 @@ function resolveTracePath(config) {
  * @returns {(line: string) => void} a never-throwing append.
  */
 function makeTrace(path) {
-  if (path === '') return () => {}
+  if (path === '') return () => { }
   return (line) => {
     try {
       appendFileSync(path, `${new Date().toISOString()} ${line}\n`)
@@ -344,14 +344,13 @@ export function apply(ctx, config) {
       const bounded = chars === undefined ? text : truncateChars(text, chars)
       return {
         summary: bounded,
-        note: chars === undefined ? '由子智能体总结' : `子智能体总结 · ≤${chars} 字`,
       }
     } catch (error) {
       return { error: error instanceof Error ? error.message : String(error) }
     } finally {
       clearTimeout(timer)
       // The run is a published child; release it whether or not it produced a digest.
-      void Promise.resolve(run?.dispose?.()).catch(() => {})
+      void Promise.resolve(run?.dispose?.()).catch(() => { })
     }
   }
 
